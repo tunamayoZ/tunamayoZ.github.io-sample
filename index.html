@@ -10,29 +10,149 @@
 
     <button id="show-comment-btn">コメント</button>
     <button id="add-memo">メモ</button>
-    <button id="addGroupButton">グループ</button>
-    <button id="add-tree">ツリー</button>
-    <button onclick="clearBorderedAndLocalStorage()">クリア</button>
 
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const showCommentBtn = document.getElementById('show-comment-btn');
+    const borderedElement = document.querySelector('.bordered');
+    let commentId = 0; // 一意のIDを生成するためのカウンター
 
-    <script>
-       function clearBorderedAndLocalStorage() {
-            // borderedクラス内のすべての要素を削除
-            const elements = document.querySelectorAll('.bordered');
-            elements.forEach(element => {
-                element.innerHTML = "";
+    // コメント欄を表示する
+    showCommentBtn.addEventListener('click', () => {
+        const commentSection = createCommentSection(commentId);
+        borderedElement.appendChild(commentSection);
+        commentId++; // 次のコメント欄のためにIDをインクリメント
+        saveToLocalStorage(); // 新しいコメント欄を追加後にローカルストレージを更新
+    });
+
+    // コメントセクションを生成する関数
+    function createCommentSection(id) {
+        const commentSection = document.createElement('div');
+        commentSection.classList.add('comment-section');
+
+        const textarea = document.createElement('textarea');
+        textarea.placeholder = '//';
+        textarea.id = `comment-${id}`; // 一意のIDを付与
+        textarea.spellcheck = false;
+
+        // テキストエリアの内容が変更された時にローカルストレージを更新
+        textarea.addEventListener('input', saveToLocalStorage);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.id = 'remove';
+        removeBtn.textContent = '✖';
+        removeBtn.addEventListener('click', () => {
+            borderedElement.removeChild(commentSection);
+            saveToLocalStorage(); // 削除後にローカルストレージを更新
+        });
+
+        commentSection.appendChild(textarea);
+        commentSection.appendChild(removeBtn);
+        return commentSection;
+    }
+
+    // ローカルストレージに保存する関数
+    function saveToLocalStorage() {
+        const memos = document.querySelectorAll('.comment-section textarea');
+        const data = [];
+        memos.forEach((memo) => {
+            data.push({ id: memo.id, content: memo.value });
+        });
+        localStorage.setItem('commentAppData', JSON.stringify(data));
+    }
+
+    // ローカルストレージからデータを読み込む関数
+    function loadFromLocalStorage() {
+        const data = localStorage.getItem('commentAppData');
+        if (data) {
+            const memos = JSON.parse(data);
+            memos.forEach(memo => {
+                const commentSection = createCommentSection(memo.id.split('-')[1]);
+                const textarea = commentSection.querySelector('textarea');
+                textarea.value = memo.content;
+                borderedElement.appendChild(commentSection);
             });
-            console.log("borderedクラス内のすべての要素を削除しました。");
-
-            // ローカルストレージのすべてのデータを削除
-            localStorage.clear();
-            console.log("ローカルストレージのデータをすべて削除しました。");
         }
-    </script>
-    <script src="comment.js"></script>
-    <script src="group.js"></script>
-    <script src="memo.js"></script>
-    <script src="tree.js"></script> 
+    }
+
+    // ページ読み込み時にローカルストレージからデータを読み込む
+    loadFromLocalStorage();
+});
+document.addEventListener('DOMContentLoaded', () => {
+    const addMemoButton = document.getElementById('add-memo');
+    const borderedDiv = document.querySelector('.bordered');
+
+    addMemoButton.addEventListener('click', () => {
+        // 新しいapp要素を作成して追加
+        const appElement = document.createElement('div');
+        appElement.className = 'app';
+
+        // 新しいメモ入力欄を作成
+        const newMemo = document.createElement('textarea');
+        newMemo.classList.add('memo-input');
+        newMemo.placeholder = 'メモを入力してEnterキーを押してください';
+        newMemo.spellcheck = false;
+
+        // Enterキーで箇条書きのリストを作成する機能を追加
+        newMemo.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const cursorPosition = newMemo.selectionStart;
+                const textBeforeCursor = newMemo.value.substring(0, cursorPosition);
+                const textAfterCursor = newMemo.value.substring(cursorPosition);
+                newMemo.value = `${textBeforeCursor}\n- ${textAfterCursor}`;
+                newMemo.selectionStart = newMemo.selectionEnd = cursorPosition + 3;
+            }
+        });
+
+        appElement.appendChild(newMemo);
+        borderedDiv.appendChild(appElement); // borderedクラスの最後に追加
+        saveToLocalStorage();
+    });
+
+    function saveToLocalStorage() {
+        const memos = document.querySelectorAll('.memo-input');
+        const data = [];
+        memos.forEach((memo, index) => {
+            data.push({ id: index, content: memo.value });
+        });
+        localStorage.setItem('memoAppData', JSON.stringify(data));
+    }
+
+    function loadFromLocalStorage() {
+        const data = JSON.parse(localStorage.getItem('memoAppData'));
+        if (data) {
+            data.forEach(memoData => {
+                const appElement = document.createElement('div');
+                appElement.className = 'app';
+
+                const newMemo = document.createElement('textarea');
+                newMemo.classList.add('memo-input');
+                newMemo.placeholder = 'メモを入力してEnterキーを押してください';
+                newMemo.spellcheck = false;
+                newMemo.value = memoData.content;
+
+                newMemo.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const cursorPosition = newMemo.selectionStart;
+                        const textBeforeCursor = newMemo.value.substring(0, cursorPosition);
+                        const textAfterCursor = newMemo.value.substring(cursorPosition);
+                        newMemo.value = `${textBeforeCursor}\n- ${textAfterCursor}`;
+                        newMemo.selectionStart = newMemo.selectionEnd = cursorPosition + 3;
+                    }
+                });
+
+                appElement.appendChild(newMemo);
+                borderedDiv.appendChild(appElement);
+            });
+        }
+    }
+
+    window.addEventListener('beforeunload', saveToLocalStorage);
+    loadFromLocalStorage();
+});
+</script>
 </body>
 </html>
 
